@@ -1,0 +1,11 @@
+[package]
+name = "shell"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+whoami = "2.1.1"
+
+[[bin]]
+name = "shell"
+path = "shell.rs"
