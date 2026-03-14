@@ -207,9 +207,9 @@ fn parse_input(input: &String, state: &mut State) -> Vec<String> {
     return args;
 }
 
-fn execute_command(args: &Vec<String>, state: &mut State) -> std::io::Result<()> {
+fn execute_command(args: &Vec<String>, state: &mut State) {
     if args[0].clone() == "" {
-        return Ok(()); //return;
+        return;
     }
 
     let mut command: &str = &args[0].clone();
@@ -224,35 +224,25 @@ fn execute_command(args: &Vec<String>, state: &mut State) -> std::io::Result<()>
 
     match command {
         "exit" => builtin_exit(&args),
-        "help" => {builtin_help(&args); return Ok(())},
-        "cd" => {builtin_cd(&args); return Ok(())},
-        "alias" => {builtin_alias(&args, state); return Ok(())},
-        "prompt" => {builtin_prompt(&args, state); return Ok(())},
-        "set" => {builtin_set(&args, state); return Ok(())},
+        "help" => {builtin_help(&args); return},
+        "cd" => {builtin_cd(&args); return},
+        "alias" => {builtin_alias(&args, state); return},
+        "prompt" => {builtin_prompt(&args, state); return},
+        "set" => {builtin_set(&args, state); return},
         _ => {},
     }
 
-    
-    let mut child = match Command::new(command)
+    let result = Command::new(command)
         .args(args_1)
-        .spawn() {
-            Ok(c) => c,
-            Err(e) => {
-                println!("shell: '{}' does not exist", command);
-                return Err(e)
-            },
-        };
-    let _ = child.wait();
-    println!("end of function");
-    Ok(())
-
-    /* 
-    let mut child = Command::new(command)
-        .args(args_1)
-        .spawn()
-        .expect("Failed to start process");
-    let _ = child.wait();
-    */
+        .spawn();
+    match result {
+        Ok(mut child) => {
+            let _ = child.wait();
+        },
+        Err(_e) => {
+            println!("shell: '{}' does not exist", command);
+        }
+    }
 }
 
 fn load_config(state: &mut State) {
@@ -266,7 +256,7 @@ fn load_config(state: &mut State) {
             continue;
         }
         let args: Vec<String> = parse_input(&cmd.clone(), state);
-        let _ = execute_command(&args, state);
+        execute_command(&args, state);
     }
 }
 
@@ -299,6 +289,6 @@ fn main() {
         let input: String = read_input();
         let args: Vec<String> = parse_input(&input, &mut state);
 
-        let _ = execute_command(&args, &mut state);
+        execute_command(&args, &mut state);
     }
 }
