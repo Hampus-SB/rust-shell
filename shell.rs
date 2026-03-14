@@ -26,7 +26,8 @@ struct Alias {
 struct State {
     prompt: String,
     aliases: Vec<Alias>,
-    variables: Vec<Variable>
+    variables: Vec<Variable>,
+    previous_commands: Vec<String>
 }
 
 impl State {
@@ -36,7 +37,7 @@ impl State {
                 return var.value.as_str();
             }
         }
-        return "ERROR";
+        return "VARIABLE NOT FOUND";
     }
 }
 
@@ -84,7 +85,13 @@ fn builtin_set(args: &Vec<String>, state: &mut State) {
         value: args[2].clone()} });
 }
 
-fn prompt_to_string(state: &State) -> String {
+fn builtin_history(_args: &Vec<String>, state: &State) {
+    for command in state.previous_commands.iter() {
+        println!("{}", command);
+    }
+}
+
+fn prompt_to_string(prompt: &String) -> String {
     let username = whoami::username().expect("failed to get username");
     let hostname = whoami::hostname().expect("failed to get hostname");
     let working_dir = env::current_dir().expect("failed to get working directory")
@@ -104,7 +111,7 @@ fn prompt_to_string(state: &State) -> String {
         }
     }
 
-    let string_vec: Vec<char> = state.prompt.chars().collect();
+    let string_vec: Vec<char> = prompt.chars().collect();
 
     let mut prompt = String::new();
     let mut c: char;
@@ -208,6 +215,9 @@ fn parse_input(input: &String, state: &mut State) -> Vec<String> {
 }
 
 fn execute_command(args: &Vec<String>, state: &mut State) {
+    if args.len() == 0 {
+        return;
+    }
     if args[0].clone() == "" {
         return;
     }
@@ -229,6 +239,7 @@ fn execute_command(args: &Vec<String>, state: &mut State) {
         "alias" => {builtin_alias(&args, state); return},
         "prompt" => {builtin_prompt(&args, state); return},
         "set" => {builtin_set(&args, state); return},
+        "history" => {builtin_history(&args, state); return},
         _ => {},
     }
 
@@ -277,18 +288,23 @@ fn main() {
     let mut state = State {
         prompt: String::new(),
         aliases: Vec::new(),
-        variables: Vec::new()};
+        variables: Vec::new(),
+        previous_commands: Vec::new()};
 
     load_config(&mut state);
     setup_env_variables(&mut state);
 
     loop {
-        print!("{}", prompt_to_string(&state));
+        print!("{}", prompt_to_string(&state.prompt));
         io::stdout().flush().unwrap();
 
         let input: String = read_input();
         let args: Vec<String> = parse_input(&input, &mut state);
 
         execute_command(&args, &mut state);
+        
+        if input != "" {
+            state.previous_commands.push(input);
+        }
     }
 }
